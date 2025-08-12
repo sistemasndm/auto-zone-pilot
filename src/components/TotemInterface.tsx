@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Camera, CreditCard, QrCode, Clock, Car, MapPin } from 'lucide-react';
+import { Camera, CreditCard, QrCode, Clock, Car, MapPin, Printer, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import QRCodeLib from 'qrcode';
 
 interface TotemInterfaceProps {
   className?: string;
@@ -15,6 +16,8 @@ export function TotemInterface({ className }: TotemInterfaceProps) {
   const [selectedTime, setSelectedTime] = useState<number | null>(null);
   const [paymentStep, setPaymentStep] = useState<'plate' | 'time' | 'payment' | 'success'>('plate');
   const [isOcrMode, setIsOcrMode] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [ticketId, setTicketId] = useState('');
 
   const timeOptions = [
     { hours: 1, price: 2.50 },
@@ -59,14 +62,72 @@ export function TotemInterface({ className }: TotemInterfaceProps) {
     return selected ? selected.price : 0;
   };
 
-  const handlePaymentSuccess = () => {
+  const generateTicketData = async () => {
+    const currentTime = new Date();
+    const validUntil = new Date(currentTime.getTime() + (selectedTime || 0) * 60 * 60 * 1000);
+    const newTicketId = `ZA${currentTime.getTime().toString().slice(-8)}`;
+    
+    const ticketData = {
+      id: newTicketId,
+      plate: plateNumber,
+      zone: 'Centro',
+      startTime: currentTime.toLocaleString('pt-BR'),
+      validUntil: validUntil.toLocaleString('pt-BR'),
+      duration: selectedTime,
+      amount: calculateTotal(),
+      paymentMethod: 'Cartão/PIX'
+    };
+
+    // Gera QR Code com os dados do ticket
+    const qrData = JSON.stringify(ticketData);
+    try {
+      const qrCodeDataUrl = await QRCodeLib.toDataURL(qrData, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#1e40af', // cor azul do tema
+          light: '#ffffff'
+        }
+      });
+      setQrCodeUrl(qrCodeDataUrl);
+    } catch (error) {
+      console.error('Erro ao gerar QR Code:', error);
+    }
+    
+    setTicketId(newTicketId);
+  };
+
+  const handlePaymentSuccess = async () => {
+    await generateTicketData();
     setPaymentStep('success');
     setTimeout(() => {
-      // Reset after 5 seconds
+      // Reset after 10 seconds to allow time to print/save
       setPaymentStep('plate');
       setPlateNumber('');
       setSelectedTime(null);
-    }, 5000);
+      setQrCodeUrl('');
+      setTicketId('');
+    }, 10000);
+  };
+
+  const handlePrint = () => {
+    const printContent = document.getElementById('ticket-content');
+    if (printContent) {
+      const originalContent = document.body.innerHTML;
+      document.body.innerHTML = printContent.innerHTML;
+      window.print();
+      document.body.innerHTML = originalContent;
+      window.location.reload(); // Reload to restore React app
+    }
+  };
+
+  const handleDownloadQR = () => {
+    if (qrCodeUrl) {
+      const link = document.createElement('a');
+      link.download = `zona-azul-${ticketId}.png`;
+      link.href = qrCodeUrl;
+      link.click();
+    }
   };
 
   return (
@@ -235,48 +296,138 @@ export function TotemInterface({ className }: TotemInterfaceProps) {
           </Card>
         )}
 
-        {/* Step 4: Success */}
+        {/* Step 4: Success with Ticket */}
         {paymentStep === 'success' && (
-          <Card className="border-accent/20 animate-slide-up">
-            <CardContent className="pt-6 text-center space-y-4">
-              <div className="w-16 h-16 bg-gradient-success rounded-full flex items-center justify-center mx-auto">
-                <Car className="w-8 h-8 text-white" />
-              </div>
-              
-              <div>
-                <h3 className="text-xl font-bold text-accent mb-2">Pagamento Aprovado!</h3>
-                <p className="text-sm text-muted-foreground">
-                  Estacionamento liberado para a placa
-                </p>
-                <div className="font-mono font-bold text-lg mt-1">{plateNumber}</div>
-              </div>
-              
-              <div className="bg-muted p-4 rounded-lg space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Tempo:</span>
-                  <span className="font-bold">{selectedTime} hora(s)</span>
+          <div className="space-y-4">
+            {/* Success Message */}
+            <Card className="border-accent/20 animate-slide-up">
+              <CardContent className="pt-6 text-center space-y-4">
+                <div className="w-16 h-16 bg-gradient-success rounded-full flex items-center justify-center mx-auto">
+                  <Car className="w-8 h-8 text-white" />
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Válido até:</span>
-                  <span className="font-bold">
-                    {new Date(Date.now() + (selectedTime || 0) * 60 * 60 * 1000).toLocaleTimeString('pt-BR', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
+                
+                <div>
+                  <h3 className="text-xl font-bold text-accent mb-2">Pagamento Aprovado!</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Comprovante gerado com sucesso
+                  </p>
+                  <div className="font-mono font-bold text-lg mt-1">{plateNumber}</div>
                 </div>
-                <div className="flex justify-between text-sm border-t pt-2">
-                  <span>Total pago:</span>
-                  <span className="font-bold text-accent">R$ {calculateTotal().toFixed(2)}</span>
+              </CardContent>
+            </Card>
+
+            {/* Digital Ticket */}
+            <Card className="border-primary/20" id="ticket-content">
+              <CardHeader className="text-center pb-2">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                    <Car className="w-3 h-3 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold text-primary">ZONA AZUL - COMPROVANTE</h3>
                 </div>
-              </div>
+                <Badge variant="outline" className="text-xs">
+                  #{ticketId}
+                </Badge>
+              </CardHeader>
               
-              <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
-                <MapPin className="w-3 h-3 mr-1" />
-                Zona Azul Centro
-              </Badge>
-            </CardContent>
-          </Card>
+              <CardContent className="space-y-4">
+                {/* QR Code */}
+                <div className="flex justify-center">
+                  {qrCodeUrl && (
+                    <div className="bg-white p-3 rounded-lg border-2 border-primary/20 shadow-sm">
+                      <img 
+                        src={qrCodeUrl} 
+                        alt="QR Code do Ticket" 
+                        className="w-32 h-32"
+                      />
+                      <p className="text-xs text-center text-muted-foreground mt-2">
+                        Escaneie para verificar
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Ticket Details */}
+                <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                  <div className="grid grid-cols-2 gap-y-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Placa:</span>
+                      <div className="font-mono font-bold text-lg">{plateNumber}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Zona:</span>
+                      <div className="font-semibold">Centro</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Início:</span>
+                      <div className="font-semibold">
+                        {new Date().toLocaleTimeString('pt-BR', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Válido até:</span>
+                      <div className="font-semibold text-primary">
+                        {new Date(Date.now() + (selectedTime || 0) * 60 * 60 * 1000).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Duração:</span>
+                      <div className="font-semibold">{selectedTime} hora(s)</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Valor:</span>
+                      <div className="font-bold text-accent">R$ {calculateTotal().toFixed(2)}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t pt-3 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      Data: {new Date().toLocaleDateString('pt-BR')}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <strong>MANTENHA ESTE COMPROVANTE VISÍVEL NO PAINEL</strong>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="h-12 text-sm"
+                    onClick={handlePrint}
+                  >
+                    <Printer className="w-4 h-4 mr-2" />
+                    Imprimir
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="h-12 text-sm"
+                    onClick={handleDownloadQR}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Baixar QR
+                  </Button>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    💡 Use o QR Code para validação rápida pelos fiscais
+                  </p>
+                  <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
+                    <MapPin className="w-3 h-3 mr-1" />
+                    Zona Azul Centro
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
     </div>
