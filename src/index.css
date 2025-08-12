@@ -17,8 +17,10 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Zona Azul Brand Colors */
+    --primary: 217 91% 60%; /* Azul vibrante do trânsito */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 217 91% 70%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -26,17 +28,30 @@ All colors MUST be HSL.
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 142 76% 36%; /* Verde de confirmação */
+    --accent-foreground: 0 0% 100%;
+
+    --warning: 48 96% 53%; /* Amarelo de atenção */
+    --warning-foreground: 222.2 84% 4.9%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 217 91% 60%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--accent)), hsl(142 76% 46%));
+    --gradient-warning: linear-gradient(135deg, hsl(var(--warning)), hsl(48 96% 63%));
+    
+    /* Shadows */
+    --shadow-totem: 0 25px 50px -12px hsl(var(--primary) / 0.25);
+    --shadow-card: 0 10px 25px -5px hsl(217 91% 60% / 0.1);
+    --shadow-button: 0 4px 14px hsl(var(--primary) / 0.4);
 
     --sidebar-background: 0 0% 98%;
 
