@@ -13,8 +13,7 @@ import {
   FileText,
   MapPin,
   Car,
-  Calendar,
-  QrCode
+  Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -90,30 +89,6 @@ export function FiscalApp() {
     }, 2500);
   };
 
-  const simulateQrScan = () => {
-    setIsScanning(true);
-    setTimeout(() => {
-      // Simula leitura de um QR Code de ticket válido
-      const mockTicketData = {
-        id: 'ZA12345678',
-        plate: 'ABC-1234',
-        zone: 'Centro',
-        validUntil: new Date(Date.now() + 45 * 60 * 1000).toLocaleTimeString('pt-BR'),
-        amount: 2.50
-      };
-      
-      setPlateSearch(mockTicketData.plate);
-      setSearchResult({
-        plate: mockTicketData.plate,
-        status: 'valid',
-        timeRemaining: '45 min',
-        paidUntil: mockTicketData.validUntil,
-        zone: mockTicketData.zone
-      });
-      setIsScanning(false);
-    }, 2000);
-  };
-
   const generateViolation = (vehicle: VehicleRecord) => {
     const violation = {
       ...vehicle,
@@ -181,33 +156,18 @@ export function FiscalApp() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant={isScanning ? "default" : "outline"}
-                    className={cn(
-                      "h-12 text-sm",
-                      isScanning && "animate-pulse-glow"
-                    )}
-                    onClick={simulateOcr}
-                    disabled={isScanning}
-                  >
-                    <Camera className="w-4 h-4 mr-2" />
-                    {isScanning ? 'Lendo...' : 'Placa'}
-                  </Button>
-                  
-                  <Button
-                    variant={isScanning ? "default" : "outline"}
-                    className={cn(
-                      "h-12 text-sm",
-                      isScanning && "animate-pulse-glow"
-                    )}
-                    onClick={simulateQrScan}
-                    disabled={isScanning}
-                  >
-                    <QrCode className="w-4 h-4 mr-2" />
-                    {isScanning ? 'Lendo...' : 'QR Code'}
-                  </Button>
-                </div>
+                <Button
+                  variant={isScanning ? "default" : "outline"}
+                  className={cn(
+                    "w-full h-12",
+                    isScanning && "animate-pulse-glow"
+                  )}
+                  onClick={simulateOcr}
+                  disabled={isScanning}
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  {isScanning ? 'Lendo placa...' : 'Escanear Placa'}
+                </Button>
                 
                 <div className="text-center text-xs text-muted-foreground">ou</div>
                 
